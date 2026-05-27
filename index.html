@@ -7,11 +7,12 @@
     <style>
         :root {
             --bg-color: #0d0e15;
-            --panel-bg: #151623;
+            --panel-bg: rgba(21, 22, 35, 0.85);
             --border-color: #24273a;
             --accent-neon: #00f2fe;
             --text-color: #cdd6f4;
             --word-color: #ff007f;
+            --combo-color: #ff007f;
         }
 
         body {
@@ -26,34 +27,120 @@
             overflow: hidden;
         }
 
-        .game-container {
-            text-align: center;
-            width: 480px;
+        /* Трьохпанельна архітектура екрана — розширена під великі монітори */
+        .screen-wrapper {
+            display: flex;
+            gap: 25px;
+            align-items: stretch;
+            max-width: 1500px; /* Збільшено ширину, щоб краще заповнити екран */
+            width: 100%;
+            padding: 0 25px;
+            box-sizing: border-box;
+            z-index: 2;
+        }
+
+        /* Бічні панелі */
+        .side-panel {
+            flex: 1;
             background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
             padding: 25px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Полотно ефекту Матриці */
+        .matrix-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.06;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .panel-content {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Головний контейнер гри (Центр) */
+        .game-container {
+            width: 650px; /* Трохи ширше */
+            background: var(--panel-bg);
+            padding: 30px;
             border-radius: 16px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 242, 254, 0.1);
             border: 1px solid var(--border-color);
             position: relative;
+            transition: transform 0.05s linear;
+            box-sizing: border-box;
+            backdrop-filter: blur(8px);
         }
 
-        h1 {
-            font-size: 24px;
-            margin: 0 0 15px 0;
+        .shake {
+            animation: shakeAnim 0.3s ease-in-out;
+        }
+
+        @keyframes shakeAnim {
+            0%, 100% { transform: translate(0, 0); }
+            10%, 90% { transform: translate(-4px, 2px); }
+            30%, 70% { transform: translate(4px, -2px); }
+            50% { transform: translate(-2px, 4px); }
+        }
+
+        #top-lives-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .heart {
+            font-size: 38px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-style: normal;
+            cursor: default;
+            text-shadow: 0 0 15px var(--word-color), 0 0 30px var(--word-color);
+        }
+
+        .heart.broken {
+            filter: grayscale(1) brightness(0.3);
+            opacity: 0.2;
+            transform: scale(0.85);
+            text-shadow: none;
+        }
+
+        h1, h2 {
+            margin: 0;
             text-transform: uppercase;
             letter-spacing: 2px;
-            color: var(--accent-neon);
             text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
         }
+
+        h1 { font-size: 32px; margin-bottom: 20px; color: var(--accent-neon); text-align: center; }
+        h2 { font-size: 22px; color: var(--accent-neon); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 
         .settings-panel {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 16px;
             margin-bottom: 20px;
             background: rgba(255, 255, 255, 0.02);
-            padding: 12px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
@@ -64,7 +151,7 @@
         }
 
         .row-label {
-            font-size: 13px;
+            font-size: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #565f89;
@@ -73,15 +160,16 @@
 
         .btn-group {
             display: flex;
-            gap: 6px;
+            gap: 10px;
+            align-items: center;
         }
 
         .control-btn {
             background: #1a1b26;
             color: var(--text-color);
             border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 10px 18px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 20px;
             cursor: pointer;
@@ -108,25 +196,48 @@
         }
 
         #score-panel {
-            display: flex;
-            justify-content: space-between;
-            font-size: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            align-items: center;
+            font-size: 18px;
             margin-bottom: 15px;
-            padding: 8px 12px;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 8px;
         }
 
-        #score {
+        .stats-left { text-align: left; font-weight: bold; color: #b4bbc8; font-size: 16px; }
+        #wpm-counter { color: var(--accent-neon); text-shadow: 0 0 5px rgba(0, 242, 254, 0.3); }
+        .stats-center { text-align: center; }
+        #score { font-size: 26px; font-weight: 900; color: #4ecca3; text-shadow: 0 0 10px rgba(78, 204, 163, 0.5); letter-spacing: 1px; }
+        .stats-right { text-align: right; font-weight: bold; font-size: 16px; }
+        #high-score { color: #e0af68; text-shadow: 0 0 5px rgba(224, 175, 104, 0.3); }
+
+        #combo-container {
             font-weight: bold;
-            color: #4ecca3;
-            text-shadow: 0 0 8px rgba(78, 204, 163, 0.4);
+            font-size: 22px;
+            color: var(--combo-color);
+            text-shadow: 0 0 10px var(--combo-color);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        #combo-container.active {
+            opacity: 1;
+            animation: pulseCombo 0.5s ease infinite alternate;
+        }
+
+        @keyframes pulseCombo {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
         }
 
         #game-area {
             position: relative;
             width: 100%;
-            height: 380px;
+            height: 450px;
             background: #090a0f;
             border: 2px solid var(--border-color);
             overflow: hidden;
@@ -149,21 +260,33 @@
 
         .word {
             position: absolute;
-            font-size: 19px;
+            font-size: 24px; /* Збільшено розмір шрифту слів */
             font-weight: 700;
             color: #fff;
             text-shadow: 0 0 8px var(--word-color), 0 0 15px var(--word-color);
             background: rgba(255, 0, 127, 0.15);
-            padding: 4px 10px;
+            padding: 8px 14px;
             border-radius: 6px;
             border: 1px solid rgba(255, 0, 127, 0.3);
             white-space: nowrap;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-neon);
+            box-shadow: 0 0 8px var(--accent-neon);
+            pointer-events: none;
+            z-index: 3;
         }
 
         #word-input {
             width: 100%;
-            padding: 14px;
-            font-size: 18px;
+            padding: 18px;
+            font-size: 22px; /* Збільшено поле введення */
             border: 2px solid var(--border-color);
             border-radius: 8px;
             outline: none;
@@ -180,201 +303,288 @@
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
         }
 
-        #word-input::placeholder {
-            color: #565f89;
+        #word-input::placeholder { color: #565f89; }
+
+        /* Списки лідерів та історії */
+        .stats-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 16px; /* Збільшено */
         }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        .stats-item .rank { color: var(--accent-neon); font-weight: bold; }
+        .stats-item .score-val { color: #4ecca3; font-weight: bold; }
+
+        /* Картки підказок справа */
+        .info-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 15px; /* Збільшено */
+            line-height: 1.6;
+        }
+        .info-card strong { color: #e0af68; }
+        .info-card code { background: #1a1b26; padding: 3px 8px; border-radius: 4px; color: var(--word-color); border: 1px solid var(--border-color); font-weight: bold; }
 
         #game-over-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(13, 14, 21, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            border-radius: 16px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 10; border-radius: 16px; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
         }
 
-        #game-over-screen.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #game-over-screen h2 {
-            font-size: 32px;
-            color: var(--word-color);
-            margin: 0 0 10px 0;
-            text-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
-            text-transform: uppercase;
-        }
-
-        #final-score {
-            font-size: 20px;
-            margin-bottom: 25px;
-            color: var(--text-color);
-        }
+        #game-over-screen.active { opacity: 1; pointer-events: auto; }
+        #game-over-screen h2 { font-size: 42px; color: var(--word-color); margin: 0 0 10px 0; text-shadow: 0 0 15px rgba(255, 0, 127, 0.6); }
+        #final-score { font-size: 26px; margin-bottom: 25px; color: var(--text-color); }
 
         .restart-btn {
-            background: transparent;
-            color: var(--accent-neon);
-            border: 2px solid var(--accent-neon);
-            padding: 12px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+            background: transparent; color: var(--accent-neon); border: 2px solid var(--accent-neon);
+            padding: 16px 40px; font-size: 22px; font-weight: bold; border-radius: 8px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
         }
 
-        .restart-btn:hover {
-            background: var(--accent-neon);
-            color: var(--bg-color);
-            box-shadow: 0 0 25px var(--accent-neon);
-        }
+        .restart-btn:hover { background: var(--accent-neon); color: var(--bg-color); box-shadow: 0 0 25px var(--accent-neon); }
         
-        .start-prompt {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 18px;
-            color: #565f89;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            animation: pulse 1.5s infinite;
-            pointer-events: none;
+        /* Виправлено центрування стартового повідомлення */
+        .start-prompt { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); /* Ідеальне вирівнювання за осями */
+            font-size: 24px; /* Збільшено напис */
+            color: #565f89; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            animation: pulse 1.5s infinite; 
+            pointer-events: none; 
             width: 100%;
+            text-align: center;
         }
-        
-        @keyframes pulse {
-            0% { opacity: 0.4; }
-            50% { opacity: 1; }
-            100% { opacity: 0.4; }
-        }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <div id="game-over-screen">
-            <h2>Гру Закінчено</h2>
-            <div id="final-score">Твій рахунок: 0</div>
-            <button class="restart-btn" onclick="resetGame()">Грати знову</button>
-        </div>
-
-        <h1>Тренажер друку</h1>
-
-        <div class="settings-panel">
-            <!-- Вибір мови -->
-            <div class="row-container">
-                <span class="row-label">Мова:</span>
-                <div class="btn-group" id="lang-group">
-                    <button class="control-btn active" onclick="setLanguage('uk')">UA</button>
-                    <button class="control-btn" onclick="setLanguage('en')">EN</button>
-                    <!-- Змінено кнопку з JS Code на Python -->
-                    <button class="control-btn" onclick="setLanguage('python')">Python</button>
-                </div>
-            </div>
-            <!-- Вибір швидкості -->
-            <div class="row-container">
-                <span class="row-label">Швидкість:</span>
-                <div class="btn-group" id="diff-group">
-                    <button class="control-btn" onclick="setDifficulty('easy')">Повільно</button>
-                    <button class="control-btn active" onclick="setDifficulty('medium')">Середньо</button>
-                    <button class="control-btn" onclick="setDifficulty('hard')">Швидко</button>
-                </div>
+    <div class="screen-wrapper">
+        
+        <!-- ЛІВА ПАНЕЛЬ -->
+        <div class="side-panel">
+            <canvas class="matrix-canvas" id="canvas-left"></canvas>
+            <div class="panel-content">
+                <h2>🏆 ТОП РЕКОРДИ</h2>
+                <ul class="stats-list" id="leaderboard-list">
+                    <li class="stats-item"><span class="rank">#1</span><span>---</span><span class="score-val">0</span></li>
+                    <li class="stats-item"><span class="rank">#2</span><span>---</span><span class="score-val">0</span></li>
+                    <li class="stats-item"><span class="rank">#3</span><span>---</span><span class="score-val">0</span></li>
+                </ul>
+                
+                <h2 style="margin-top: 30px;">🕒 ОСТАННІ ІГРИ</h2>
+                <ul class="stats-list" id="history-list">
+                    <li class="stats-item" style="opacity: 0.5;">Історії поки немає...</li>
+                </ul>
             </div>
         </div>
-        
-        <div id="score-panel">
-            <span>Режим: <span id="current-info" style="color: var(--accent-neon)">UA / Середньо</span></span>
-            <div id="score">Рахунок: 0</div>
+
+        <!-- ЦЕНТРАЛЬНА ПАНЕЛЬ -->
+        <div class="game-container" id="main-container">
+            <div id="top-lives-container">
+                <i class="heart">❤️</i>
+                <i class="heart">❤️</i>
+                <i class="heart">❤️</i>
+            </div>
+
+            <div id="game-over-screen">
+                <h2>Гру Закінчено</h2>
+                <div id="final-score">Твій рахунок: 0</div>
+                <button class="restart-btn" onclick="resetGame()">Грати знову</button>
+            </div>
+
+            <h1>Тренажер друку</h1>
+
+            <div class="settings-panel">
+                <div class="row-container">
+                    <span class="row-label">Мова & Звук:</span>
+                    <div class="btn-group">
+                        <button id="sound-btn" class="control-btn active" onclick="toggleSound()" style="background: #24283b;">Звук: ВМК</button>
+                        <div class="btn-group" id="lang-group">
+                            <button class="control-btn active" onclick="setLanguage('uk')">UA</button>
+                            <button class="control-btn" onclick="setLanguage('en')">EN</button>
+                            <button class="control-btn" onclick="setLanguage('python')">Python</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row-container">
+                    <span class="row-label">Швидкість:</span>
+                    <div class="btn-group" id="diff-group">
+                        <button class="control-btn" onclick="setDifficulty('easy')">Повільно</button>
+                        <button class="control-btn active" onclick="setDifficulty('medium')">Середньо</button>
+                        <button class="control-btn" onclick="setDifficulty('hard')">Швидко</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="score-panel">
+                <div class="stats-left">Швидкість: <br><span id="wpm-counter">0 КВВ</span></div>
+                <div class="stats-center"><div id="score">0</div></div>
+                <div class="stats-right">РЕКОРД: <br><span id="high-score">0</span></div>
+            </div>
+
+            <div id="combo-container">COMBO x1</div>
+            
+            <div id="game-area">
+                <div id="start-msg" class="start-prompt">Обери режим для старту...</div>
+            </div>
+            
+            <input type="text" id="word-input" placeholder="Обери налаштування, щоб почати" disabled autocomplete="off">
         </div>
-        
-        <div id="game-area">
-            <div id="start-msg" class="start-prompt">Обери режим для старту...</div>
+
+        <!-- ПРАВА ПАНЕЛЬ -->
+        <div class="side-panel">
+            <canvas class="matrix-canvas" id="canvas-right"></canvas>
+            <div class="panel-content">
+                <h2>⚡ СИСТЕМА КОМБО</h2>
+                <div class="info-card">
+                    Набирайте серію правильних слів без помилок та пропусків для активації множників:<br><br>
+                    🔥 <strong>5 слів</strong> — Множник <span style="color: #ff007f">x2</span><br>
+                    ⚡ <strong>12 слів</strong> — Множник <span style="color: #00f2fe">x3</span><br>
+                    🏆 <strong>20 слів</strong> — Множник <span style="color: #e0af68">x5</span>
+                </div>
+
+                <h2 style="margin-top: 30px;">⌨️ ГАРЯЧІ КЛАВІШІ</h2>
+                <div class="info-card">
+                    • <code>Esc</code> — швидке скидання та повне перезавантаження активного раунду гри.<br><br>
+                    • <code>Клік мишкою</code> по будь-якій кнопці вибору режиму автоматично фокусує курсор у поле введення.
+                </div>
+            </div>
         </div>
-        
-        <input type="text" id="word-input" placeholder="Обери налаштування, щоб почати" disabled autocomplete="off">
+
     </div>
 
     <script>
         const gameArea = document.getElementById('game-area');
+        const mainContainer = document.getElementById('main-container');
         const wordInput = document.getElementById('word-input');
         const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('high-score');
+        const comboContainer = document.getElementById('combo-container');
+        const wpmDisplay = document.getElementById('wpm-counter');
         const gameOverScreen = document.getElementById('game-over-screen');
         const finalScoreDisplay = document.getElementById('final-score');
-        const currentInfoDisplay = document.getElementById('current-info');
         const startMsg = document.getElementById('start-msg');
+        const soundBtn = document.getElementById('sound-btn');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const historyList = document.getElementById('history-list');
 
         const wordDictionary = {
-            uk: [
-                'код', 'програма', 'стиль', 'браузер', 'скрипт', 'цикл', 'масив', 'функція', 
-                'об\'єкт', 'верстка', 'сервер', 'запит', 'індекс', 'потік', 'клас', 'метод', 
-                'хакер', 'екран', 'кнопка', 'дані', 'сайт', 'пароль', 'логін', 'хостинг',
-                'комп\'ютер', 'алгоритм', 'інтернет', 'розробка', 'інтерфейс', 'пам\'ять'
-            ],
-            en: [
-                'code', 'program', 'style', 'browser', 'script', 'loop', 'array', 'function',
-                'object', 'server', 'request', 'index', 'stream', 'class', 'method', 'hacker',
-                'screen', 'button', 'data', 'website', 'password', 'login', 'hosting',
-                'computer', 'algorithm', 'internet', 'development', 'interface', 'memory'
-            ],
-            // Оновлений словник для Python конструкцій
-            python: [
-                'print', 'import', 'def', 'return', 'if', 'elif', 'else', 'while', 'for', 'in',
-                'try', 'except', 'lambda', 'with', 'as', 'class', 'pass', 'break', 'continue',
-                'range', 'len', 'append', 'split', 'join', 'list', 'dict', 'set', 'tuple',
-                'isinstance', 'enumerate', 'zip', 'randint', 'pygame', 'init', 'display'
-            ]
+            uk: ['код', 'програма', 'стиль', 'браузер', 'скрипт', 'цикл', 'масив', 'функція', 'об\'єкт', 'верстка', 'сервер', 'запит', 'індекс', 'потік', 'клас', 'метод', 'хакер', 'екран', 'кнопка', 'дані', 'сайт', 'пароль', 'логін', 'хостинг', 'комп\'ютер', 'алгоритм', 'інтернет', 'розробка', 'інтерфейс', 'пам\'ять'],
+            en: ['code', 'program', 'style', 'browser', 'script', 'loop', 'array', 'function', 'object', 'server', 'request', 'index', 'stream', 'class', 'method', 'hacker', 'screen', 'button', 'data', 'website', 'password', 'login', 'hosting', 'computer', 'algorithm', 'internet', 'development', 'interface', 'memory'],
+            python: ['print', 'import', 'def', 'return', 'if', 'elif', 'else', 'while', 'for', 'in', 'try', 'except', 'lambda', 'with', 'as', 'class', 'pass', 'break', 'continue', 'range', 'len', 'append', 'split', 'join', 'list', 'dict', 'set', 'tuple', 'isinstance', 'enumerate', 'zip', 'randint', 'pygame', 'init', 'display']
         };
 
-        const inputPlaceholders = {
-            uk: 'Починай друкувати тут...',
-            en: 'Start typing here...',
-            python: 'def my_function(): ...'
-        };
+        const inputPlaceholders = { uk: 'Починай друкувати тут...', en: 'Start typing here...', python: 'def my_function(): ...' };
 
         let score = 0;
+        let highScore = localStorage.getItem('neonTypingHighScore') || 0;
+        let scoreHistory = JSON.parse(localStorage.getItem('neonTypingHistory')) || [];
+        let topScores = JSON.parse(localStorage.getItem('neonTypingTopScores')) || [0, 0, 0];
+        
+        let lives = 3; 
+        let comboCount = 0;
+        let multiplier = 1;
+        let correctWordsCount = 0;
+        let startTime = null;
         let fallingWords = [];
+        let particlesPool = [];
         let gameInterval;
         let animationFrameId;
         let isGameOver = false;
         let isGameStarted = false; 
+        let soundEnabled = true;
         
         let currentLanguage = 'uk';
         let currentDifficulty = 'medium';
 
         const difficultySettings = {
-            easy: { speed: 0.8, spawnTime: 2300, name: 'Повільно' },
-            medium: { speed: 1.4, spawnTime: 1700, name: 'Середньо' },
-            hard: { speed: 2.2, spawnTime: 1200, name: 'Швидко' }
+            easy: { speed: 0.8, spawnTime: 2300 },
+            medium: { speed: 1.4, spawnTime: 1700 },
+            hard: { speed: 2.2, spawnTime: 1200 }
         };
 
         const COLUMNS_COUNT = 4;
         let columnTimestamps = new Array(COLUMNS_COUNT).fill(0);
 
+        highScoreDisplay.innerText = highScore;
+        renderSidePanelsData();
+        
+        // Запуск оновлених холстів під нові розміри панелей
+        initMatrixEffect('canvas-left');
+        initMatrixEffect('canvas-right');
+
+        let audioCtx = null;
+        function initAudio() { 
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+        
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'type') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now);
+                gain.gain.setValueAtTime(0.04, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+                osc.start(now); osc.stop(now + 0.04);
+            } else if (type === 'hit') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'miss') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(70, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'break') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now);
+                gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) { soundBtn.innerText = "Звук: ВМК"; soundBtn.classList.add('active'); initAudio(); } 
+            else { soundBtn.innerText = "Звук: ВИМК"; soundBtn.classList.remove('active'); }
+            wordInput.focus();
+        }
+
         function toggleSettingsButtons(disable) {
-            const buttons = document.querySelectorAll('.control-btn');
-            buttons.forEach(btn => btn.disabled = disable);
+            document.querySelectorAll('.control-btn:not(#sound-btn)').forEach(btn => btn.disabled = disable);
         }
 
         function startGameRound() {
             if (isGameStarted) return;
-            
+            initAudio();
             isGameStarted = true;
+            startTime = Date.now();
             toggleSettingsButtons(true); 
-            
             if (startMsg) startMsg.style.display = 'none'; 
             
             wordInput.disabled = false;
@@ -387,53 +597,32 @@
 
         function setLanguage(lang) {
             if (isGameStarted) return; 
-
             currentLanguage = lang;
-            updateStatusDisplay();
-            
             document.querySelectorAll('#lang-group .control-btn').forEach(btn => btn.classList.remove('active'));
-            // Оновлено логіку індексів під нову кнопку
             const idx = lang === 'uk' ? 0 : lang === 'en' ? 1 : 2;
             document.querySelectorAll('#lang-group .control-btn')[idx].classList.add('active');
-
             startGameRound(); 
         }
 
         function setDifficulty(level) {
             if (isGameStarted) return; 
-
             currentDifficulty = level;
-            updateStatusDisplay();
-
             document.querySelectorAll('#diff-group .control-btn').forEach(btn => btn.classList.remove('active'));
             const idx = level === 'easy' ? 0 : level === 'medium' ? 1 : 2;
             document.querySelectorAll('#diff-group .control-btn')[idx].classList.add('active');
-
             startGameRound(); 
-        }
-
-        function updateStatusDisplay() {
-            const langName = currentLanguage === 'uk' ? 'UA' : currentLanguage === 'en' ? 'EN' : 'Python';
-            const diffName = difficultySettings[currentDifficulty].name;
-            currentInfoDisplay.innerText = `${langName} / ${diffName}`;
         }
 
         function createWord() {
             if (isGameOver) return;
-
             const now = Date.now();
             let availableColumns = [];
             const safetyDelay = difficultySettings[currentDifficulty].spawnTime * 1.2;
 
             for (let i = 0; i < COLUMNS_COUNT; i++) {
-                if (now - columnTimestamps[i] > safetyDelay) {
-                    availableColumns.push(i);
-                }
+                if (now - columnTimestamps[i] > safetyDelay) availableColumns.push(i);
             }
-
-            if (availableColumns.length === 0) {
-                availableColumns = [Math.floor(Math.random() * COLUMNS_COUNT)];
-            }
+            if (availableColumns.length === 0) availableColumns = [Math.floor(Math.random() * COLUMNS_COUNT)];
 
             const chosenColumn = availableColumns[Math.floor(Math.random() * availableColumns.length)];
             columnTimestamps[chosenColumn] = now;
@@ -444,7 +633,6 @@
             const wordElem = document.createElement('div');
             wordElem.classList.add('word');
             wordElem.innerText = text;
-            
             gameArea.appendChild(wordElem);
             
             const columnWidth = gameArea.clientWidth / COLUMNS_COUNT;
@@ -454,51 +642,124 @@
             wordElem.style.left = safeX + 'px';
             wordElem.style.top = '0px';
             
-            fallingWords.push({
-                element: wordElem,
-                text: text,
-                top: 0
-            });
+            fallingWords.push({ element: wordElem, text: text, top: 0 });
+        }
+
+        function createExplosion(x, y) {
+            const colors = ['#00f2fe', '#ff007f', '#4ecca3', '#fff'];
+            for (let i = 0; i < 20; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 2;
+                gameArea.appendChild(p);
+                particlesPool.push({ element: p, x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alpha: 1 });
+            }
+        }
+
+        function triggerScreenShake() {
+            mainContainer.classList.add('shake');
+            setTimeout(() => mainContainer.classList.remove('shake'), 300);
+        }
+
+        function updateCombo(reset = false) {
+            if (reset) {
+                if (comboCount > 3) playSound('break');
+                comboCount = 0; multiplier = 1;
+                comboContainer.classList.remove('active');
+            } else {
+                comboCount++;
+                if (comboCount >= 20) { multiplier = 5; document.documentElement.style.setProperty('--combo-color', '#e0af68'); }
+                else if (comboCount >= 12) { multiplier = 3; document.documentElement.style.setProperty('--combo-color', '#00f2fe'); }
+                else if (comboCount >= 5) { multiplier = 2; document.documentElement.style.setProperty('--combo-color', '#ff007f'); }
+                
+                if (multiplier > 1) {
+                    comboContainer.innerText = `COMBO x${multiplier}`;
+                    comboContainer.classList.add('active');
+                }
+            }
+        }
+
+        function calculateWPM() {
+            if (!startTime || correctWordsCount === 0) return;
+            const timePassedMinutes = (Date.now() - startTime) / 60000;
+            const wpm = Math.round(correctWordsCount / timePassedMinutes);
+            wpmDisplay.innerText = `${wpm} КВВ`;
         }
 
         function updateGame() {
             if (isGameOver) return;
-
             const baseSpeed = difficultySettings[currentDifficulty].speed;
 
-            for (let i = 0; i < fallingWords.length; i++) {
+            for (let i = fallingWords.length - 1; i >= 0; i--) {
                 let wordObj = fallingWords[i];
-                const speedUp = score * 0.002; 
+                const speedUp = score * 0.0015; 
                 wordObj.top += (baseSpeed + speedUp);
                 wordObj.element.style.top = wordObj.top + 'px';
                 
-                if (wordObj.top > gameArea.clientHeight - 32) {
-                    endGame();
-                    return;
+                if (wordObj.top > gameArea.clientHeight - 42) {
+                    gameArea.removeChild(wordObj.element);
+                    fallingWords.splice(i, 1);
+                    lives--;
+                    updateLivesDisplay();
+                    updateCombo(true);
+                    triggerScreenShake();
+                    playSound('miss');
+
+                    wordInput.style.borderColor = 'var(--word-color)';
+                    setTimeout(() => { if(!isGameOver) wordInput.style.borderColor = 'var(--border-color)'; }, 200);
+
+                    if (lives <= 0) { endGame(); return; }
+                }
+            }
+
+            for (let i = particlesPool.length - 1; i >= 0; i--) {
+                let p = particlesPool[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.alpha -= 0.02;
+                p.element.style.left = p.x + 'px'; p.element.style.top = p.y + 'px'; p.element.style.opacity = p.alpha;
+                if (p.alpha <= 0) {
+                    gameArea.removeChild(p.element);
+                    particlesPool.splice(i, 1);
                 }
             }
             
+            if (isGameStarted) calculateWPM();
             animationFrameId = requestAnimationFrame(updateGame);
         }
 
+        function updateLivesDisplay() {
+            const hearts = document.querySelectorAll('#top-lives-container .heart');
+            hearts.forEach((heart, index) => {
+                if (index >= lives) heart.classList.add('broken');
+                else heart.classList.remove('broken');
+            });
+        }
+
         wordInput.addEventListener('input', () => {
+            playSound('type');
             const inputText = wordInput.value.trim();
-            
             const wordIndex = fallingWords.findIndex(w => {
-                // Оскільки у Python важливий регістр і символи підкреслення, перевіряємо точний збіг
-                if (currentLanguage === 'python') {
-                    return w.text === inputText;
-                } else {
-                    return w.text.toLowerCase() === inputText.toLowerCase();
-                }
+                if (currentLanguage === 'python') return w.text === inputText;
+                else return w.text.toLowerCase() === inputText.toLowerCase();
             });
             
             if (wordIndex !== -1) {
-                gameArea.removeChild(fallingWords[wordIndex].element);
+                const targetWord = fallingWords[wordIndex].element;
+                const rectX = parseFloat(targetWord.style.left) + (targetWord.clientWidth / 2);
+                const rectY = parseFloat(targetWord.style.top) + (targetWord.clientHeight / 2);
+                
+                createExplosion(rectX, rectY);
+                playSound('hit');
+                gameArea.removeChild(targetWord);
                 fallingWords.splice(wordIndex, 1);
                 
-                score += 10;
-                scoreDisplay.innerText = `Рахунок: ${score}`;
+                correctWordsCount++;
+                updateCombo(false);
+                score += 10 * multiplier;
+                scoreDisplay.innerText = score;
                 wordInput.value = ''; 
                 
                 wordInput.style.borderColor = '#4ecca3';
@@ -512,30 +773,100 @@
             clearInterval(gameInterval);
             cancelAnimationFrame(animationFrameId);
             
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('neonTypingHighScore', highScore);
+                highScoreDisplay.innerText = highScore;
+            }
+
+            saveGameStats(score);
             finalScoreDisplay.innerText = `Твій рахунок: ${score}`;
             gameOverScreen.classList.add('active');
-            wordInput.blur();
-            wordInput.disabled = true;
+            wordInput.blur(); wordInput.disabled = true;
+        }
+
+        function saveGameStats(finalScore) {
+            scoreHistory.unshift({ score: finalScore, date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+            if (scoreHistory.length > 5) scoreHistory.pop();
+            localStorage.setItem('neonTypingHistory', JSON.stringify(scoreHistory));
+
+            topScores.push(finalScore);
+            topScores.sort((a, b) => b - a);
+            topScores = topScores.slice(0, 3);
+            localStorage.setItem('neonTypingTopScores', JSON.stringify(topScores));
+
+            renderSidePanelsData();
+        }
+
+        function renderSidePanelsData() {
+            leaderboardList.innerHTML = topScores.map((s, idx) => `
+                <li class="stats-item"><span class="rank">#${idx+1}</span><span>Гравець</span><span class="score-val">${s}</span></li>
+            `).join('');
+
+            if (scoreHistory.length === 0) {
+                historyList.innerHTML = `<li class="stats-item" style="opacity:0.5; justify-content: center;">Історії поки немає...</li>`;
+            } else {
+                historyList.innerHTML = scoreHistory.map(item => `
+                    <li class="stats-item"><span style="color:#565f89">${item.date}</span><span class="score-val">${item.score} очок</span></li>
+                `).join('');
+            }
         }
 
         function resetGame() {
             gameOverScreen.classList.remove('active');
-            score = 0;
-            scoreDisplay.innerText = 'Рахунок: 0';
+            score = 0; lives = 3; correctWordsCount = 0; startTime = null;
+            updateCombo(true);
+            scoreDisplay.innerText = '0';
+            wpmDisplay.innerText = '0 КВВ';
+            updateLivesDisplay();
             
-            fallingWords.forEach(w => {
-                if (w.element.parentNode === gameArea) gameArea.removeChild(w.element);
-            });
-            fallingWords = [];
+            fallingWords.forEach(w => { if (w.element.parentNode === gameArea) gameArea.removeChild(w.element); });
+            particlesPool.forEach(p => { if (p.element.parentNode === gameArea) gameArea.removeChild(p.element); });
+            fallingWords = []; particlesPool = [];
             columnTimestamps.fill(0);
             
             wordInput.value = '';
-            isGameOver = false;
-            isGameStarted = false;
-            
+            isGameOver = false; isGameStarted = false;
             toggleSettingsButtons(false); 
             if (startMsg) startMsg.style.display = 'block'; 
             wordInput.placeholder = "Обери налаштування, щоб почати";
+            initAudio();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') resetGame();
+        });
+
+        function initMatrixEffect(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Динамічне підлаштування розмірів холсту під панель
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight || 600;
+
+            const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const rainDrops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(13, 14, 21, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00f2fe';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < rainDrops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[i] = 0;
+                    }
+                    rainDrops[i]++;
+                }
+            }
+            setInterval(draw, 33);
         }
     </script>
 </body>
