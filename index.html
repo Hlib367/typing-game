@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер друку | Неоновий Шторм</title>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --panel-bg: #151623;
+            --border-color: #24273a;
+            --accent-neon: #00f2fe;
+            --text-color: #cdd6f4;
+            --word-color: #ff007f;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            width: 480px;
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-neon);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .settings-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .row-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .row-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #565f89;
+            font-weight: bold;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .control-btn {
+            background: #1a1b26;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            border-color: var(--accent-neon);
+            color: var(--accent-neon);
+        }
+
+        .control-btn.active {
+            background: var(--accent-neon);
+            color: var(--bg-color);
+            border-color: var(--accent-neon);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: var(--border-color);
+            box-shadow: none !important;
+        }
+
+        #score-panel {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            margin-bottom: 15px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        #score {
+            font-weight: bold;
+            color: #4ecca3;
+            text-shadow: 0 0 8px rgba(78, 204, 163, 0.4);
+        }
+
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: 380px;
+            background: #090a0f;
+            border: 2px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        #game-area::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--word-color);
+            box-shadow: 0 0 10px var(--word-color);
+            opacity: 0.7;
+        }
+
+        .word {
+            position: absolute;
+            font-size: 19px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 8px var(--word-color), 0 0 15px var(--word-color);
+            background: rgba(255, 0, 127, 0.15);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 0, 127, 0.3);
+            white-space: nowrap;
+        }
+
+        #word-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            box-sizing: border-box;
+            background: #1a1b26;
+            color: #fff;
+            text-align: center;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        #word-input:focus {
+            border-color: var(--accent-neon);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+        }
+
+        #word-input::placeholder {
+            color: #565f89;
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 14, 21, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #game-over-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #game-over-screen h2 {
+            font-size: 32px;
+            color: var(--word-color);
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
+            text-transform: uppercase;
+        }
+
+        #final-score {
+            font-size: 20px;
+            margin-bottom: 25px;
+            color: var(--text-color);
+        }
+
+        .restart-btn {
+            background: transparent;
+            color: var(--accent-neon);
+            border: 2px solid var(--accent-neon);
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+        }
+
+        .restart-btn:hover {
+            background: var(--accent-neon);
+            color: var(--bg-color);
+            box-shadow: 0 0 25px var(--accent-neon);
+        }
+        
+        .start-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #565f89;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite;
+            pointer-events: none;
+            width: 100%;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div id="game-over-screen">
+            <h2>Гру Закінчено</h2>
+            <div id="final-score">Твій рахунок: 0</div>
+            <button class="restart-btn" onclick="resetGame()">Грати знову</button>
+        </div>
+
+        <h1>Тренажер друку</h1>
+
+        <div class="settings-panel">
+            <!-- Вибір мови -->
+            <div class="row-container">
+                <span class="row-label">Мова:</span>
+                <div class="btn-group" id="lang-group">
+                    <button class="control-btn active" onclick="setLanguage('uk')">UA</button>
+                    <button class="control-btn" onclick="setLanguage('en')">EN</button>
+                    <!-- Змінено кнопку з JS Code на Python -->
+                    <button class="control-btn" onclick="setLanguage('python')">Python</button>
+                </div>
+            </div>
+            <!-- Вибір швидкості -->
+            <div class="row-container">
+                <span class="row-label">Швидкість:</span>
+                <div class="btn-group" id="diff-group">
+                    <button class="control-btn" onclick="setDifficulty('easy')">Повільно</button>
+                    <button class="control-btn active" onclick="setDifficulty('medium')">Середньо</button>
+                    <button class="control-btn" onclick="setDifficulty('hard')">Швидко</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="score-panel">
+            <span>Режим: <span id="current-info" style="color: var(--accent-neon)">UA / Середньо</span></span>
+            <div id="score">Рахунок: 0</div>
+        </div>
+        
+        <div id="game-area">
+            <div id="start-msg" class="start-prompt">Обери режим для старту...</div>
+        </div>
+        
+        <input type="text" id="word-input" placeholder="Обери налаштування, щоб почати" disabled autocomplete="off">
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('game-area');
+        const wordInput = document.getElementById('word-input');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const currentInfoDisplay = document.getElementById('current-info');
+        const startMsg = document.getElementById('start-msg');
+
+        const wordDictionary = {
+            uk: [
+                'код', 'програма', 'стиль', 'браузер', 'скрипт', 'цикл', 'масив', 'функція', 
+                'об\'єкт', 'верстка', 'сервер', 'запит', 'індекс', 'потік', 'клас', 'метод', 
+                'хакер', 'екран', 'кнопка', 'дані', 'сайт', 'пароль', 'логін', 'хостинг',
+                'комп\'ютер', 'алгоритм', 'інтернет', 'розробка', 'інтерфейс', 'пам\'ять'
+            ],
+            en: [
+                'code', 'program', 'style', 'browser', 'script', 'loop', 'array', 'function',
+                'object', 'server', 'request', 'index', 'stream', 'class', 'method', 'hacker',
+                'screen', 'button', 'data', 'website', 'password', 'login', 'hosting',
+                'computer', 'algorithm', 'internet', 'development', 'interface', 'memory'
+            ],
+            // Оновлений словник для Python конструкцій
+            python: [
+                'print', 'import', 'def', 'return', 'if', 'elif', 'else', 'while', 'for', 'in',
+                'try', 'except', 'lambda', 'with', 'as', 'class', 'pass', 'break', 'continue',
+                'range', 'len', 'append', 'split', 'join', 'list', 'dict', 'set', 'tuple',
+                'isinstance', 'enumerate', 'zip', 'randint', 'pygame', 'init', 'display'
+            ]
+        };
+
+        const inputPlaceholders = {
+            uk: 'Починай друкувати тут...',
+            en: 'Start typing here...',
+            python: 'def my_function(): ...'
+        };
+
+        let score = 0;
+        let fallingWords = [];
+        let gameInterval;
+        let animationFrameId;
+        let isGameOver = false;
+        let isGameStarted = false; 
+        
+        let currentLanguage = 'uk';
+        let currentDifficulty = 'medium';
+
+        const difficultySettings = {
+            easy: { speed: 0.8, spawnTime: 2300, name: 'Повільно' },
+            medium: { speed: 1.4, spawnTime: 1700, name: 'Середньо' },
+            hard: { speed: 2.2, spawnTime: 1200, name: 'Швидко' }
+        };
+
+        const COLUMNS_COUNT = 4;
+        let columnTimestamps = new Array(COLUMNS_COUNT).fill(0);
+
+        function toggleSettingsButtons(disable) {
+            const buttons = document.querySelectorAll('.control-btn');
+            buttons.forEach(btn => btn.disabled = disable);
+        }
+
+        function startGameRound() {
+            if (isGameStarted) return;
+            
+            isGameStarted = true;
+            toggleSettingsButtons(true); 
+            
+            if (startMsg) startMsg.style.display = 'none'; 
+            
+            wordInput.disabled = false;
+            wordInput.placeholder = inputPlaceholders[currentLanguage];
+            setTimeout(() => wordInput.focus(), 50);
+
+            gameInterval = setInterval(createWord, difficultySettings[currentDifficulty].spawnTime);
+            updateGame();
+        }
+
+        function setLanguage(lang) {
+            if (isGameStarted) return; 
+
+            currentLanguage = lang;
+            updateStatusDisplay();
+            
+            document.querySelectorAll('#lang-group .control-btn').forEach(btn => btn.classList.remove('active'));
+            // Оновлено логіку індексів під нову кнопку
+            const idx = lang === 'uk' ? 0 : lang === 'en' ? 1 : 2;
+            document.querySelectorAll('#lang-group .control-btn')[idx].classList.add('active');
+
+            startGameRound(); 
+        }
+
+        function setDifficulty(level) {
+            if (isGameStarted) return; 
+
+            currentDifficulty = level;
+            updateStatusDisplay();
+
+            document.querySelectorAll('#diff-group .control-btn').forEach(btn => btn.classList.remove('active'));
+            const idx = level === 'easy' ? 0 : level === 'medium' ? 1 : 2;
+            document.querySelectorAll('#diff-group .control-btn')[idx].classList.add('active');
+
+            startGameRound(); 
+        }
+
+        function updateStatusDisplay() {
+            const langName = currentLanguage === 'uk' ? 'UA' : currentLanguage === 'en' ? 'EN' : 'Python';
+            const diffName = difficultySettings[currentDifficulty].name;
+            currentInfoDisplay.innerText = `${langName} / ${diffName}`;
+        }
+
+        function createWord() {
+            if (isGameOver) return;
+
+            const now = Date.now();
+            let availableColumns = [];
+            const safetyDelay = difficultySettings[currentDifficulty].spawnTime * 1.2;
+
+            for (let i = 0; i < COLUMNS_COUNT; i++) {
+                if (now - columnTimestamps[i] > safetyDelay) {
+                    availableColumns.push(i);
+                }
+            }
+
+            if (availableColumns.length === 0) {
+                availableColumns = [Math.floor(Math.random() * COLUMNS_COUNT)];
+            }
+
+            const chosenColumn = availableColumns[Math.floor(Math.random() * availableColumns.length)];
+            columnTimestamps[chosenColumn] = now;
+
+            const currentWordPool = wordDictionary[currentLanguage];
+            const text = currentWordPool[Math.floor(Math.random() * currentWordPool.length)];
+            
+            const wordElem = document.createElement('div');
+            wordElem.classList.add('word');
+            wordElem.innerText = text;
+            
+            gameArea.appendChild(wordElem);
+            
+            const columnWidth = gameArea.clientWidth / COLUMNS_COUNT;
+            const x = (chosenColumn * columnWidth) + (columnWidth - wordElem.clientWidth) / 2;
+            const safeX = Math.max(5, Math.min(x, gameArea.clientWidth - wordElem.clientWidth - 5));
+            
+            wordElem.style.left = safeX + 'px';
+            wordElem.style.top = '0px';
+            
+            fallingWords.push({
+                element: wordElem,
+                text: text,
+                top: 0
+            });
+        }
+
+        function updateGame() {
+            if (isGameOver) return;
+
+            const baseSpeed = difficultySettings[currentDifficulty].speed;
+
+            for (let i = 0; i < fallingWords.length; i++) {
+                let wordObj = fallingWords[i];
+                const speedUp = score * 0.002; 
+                wordObj.top += (baseSpeed + speedUp);
+                wordObj.element.style.top = wordObj.top + 'px';
+                
+                if (wordObj.top > gameArea.clientHeight - 32) {
+                    endGame();
+                    return;
+                }
+            }
+            
+            animationFrameId = requestAnimationFrame(updateGame);
+        }
+
+        wordInput.addEventListener('input', () => {
+            const inputText = wordInput.value.trim();
+            
+            const wordIndex = fallingWords.findIndex(w => {
+                // Оскільки у Python важливий регістр і символи підкреслення, перевіряємо точний збіг
+                if (currentLanguage === 'python') {
+                    return w.text === inputText;
+                } else {
+                    return w.text.toLowerCase() === inputText.toLowerCase();
+                }
+            });
+            
+            if (wordIndex !== -1) {
+                gameArea.removeChild(fallingWords[wordIndex].element);
+                fallingWords.splice(wordIndex, 1);
+                
+                score += 10;
+                scoreDisplay.innerText = `Рахунок: ${score}`;
+                wordInput.value = ''; 
+                
+                wordInput.style.borderColor = '#4ecca3';
+                setTimeout(() => { if(!isGameOver) wordInput.style.borderColor = 'var(--border-color)'; }, 200);
+            }
+        });
+
+        function endGame() {
+            isGameOver = true;
+            isGameStarted = false;
+            clearInterval(gameInterval);
+            cancelAnimationFrame(animationFrameId);
+            
+            finalScoreDisplay.innerText = `Твій рахунок: ${score}`;
+            gameOverScreen.classList.add('active');
+            wordInput.blur();
+            wordInput.disabled = true;
+        }
+
+        function resetGame() {
+            gameOverScreen.classList.remove('active');
+            score = 0;
+            scoreDisplay.innerText = 'Рахунок: 0';
+            
+            fallingWords.forEach(w => {
+                if (w.element.parentNode === gameArea) gameArea.removeChild(w.element);
+            });
+            fallingWords = [];
+            columnTimestamps.fill(0);
+            
+            wordInput.value = '';
+            isGameOver = false;
+            isGameStarted = false;
+            
+            toggleSettingsButtons(false); 
+            if (startMsg) startMsg.style.display = 'block'; 
+            wordInput.placeholder = "Обери налаштування, щоб почати";
+        }
+    </script>
+</body>
+</html>
